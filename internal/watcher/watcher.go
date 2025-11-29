@@ -113,6 +113,9 @@ func (w *Worker) handleEvent(ctx context.Context, ev scanner.Event) {
 		}
 		w.debounceMap[ev.Path] = time.Now()
 	}
+	if ev.Type == "delete" {
+		delete(w.debounceMap, ev.Path)
+	}
 	w.tracker.IncEvent(w.cfg.Path)
 	selected := w.matcher.Match(ev, w.cfg)
 	for _, action := range selected {
