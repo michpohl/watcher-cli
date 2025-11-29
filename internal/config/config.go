@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -40,21 +41,21 @@ type Defaults struct {
 
 // Global applies to all watches unless overridden.
 type Global struct {
-	ScanInterval time.Duration `yaml:"scan_interval_ms"`
-	Debounce     time.Duration `yaml:"debounce_ms"`
-	DryRun       bool          `yaml:"dry_run"`
-	Defaults     Defaults      `yaml:"defaults"`
+	ScanInterval MillisDuration `yaml:"scan_interval_ms"`
+	Debounce     MillisDuration `yaml:"debounce_ms"`
+	DryRun       bool           `yaml:"dry_run"`
+	Defaults     Defaults       `yaml:"defaults"`
 }
 
 // Condition filters actions.
 type Condition struct {
-	MinSizeBytes int64         `yaml:"min_size_bytes"`
-	MaxSizeBytes int64         `yaml:"max_size_bytes"`
-	MinAge       time.Duration `yaml:"min_age_ms"`
-	MaxAge       time.Duration `yaml:"max_age_ms"`
-	OnlyFiles    bool          `yaml:"only_files"`
-	OnlyDirs     bool          `yaml:"only_dirs"`
-	IgnoreHidden *bool         `yaml:"ignore_hidden"`
+	MinSizeBytes int64          `yaml:"min_size_bytes"`
+	MaxSizeBytes int64          `yaml:"max_size_bytes"`
+	MinAge       MillisDuration `yaml:"min_age_ms"`
+	MaxAge       MillisDuration `yaml:"max_age_ms"`
+	OnlyFiles    bool           `yaml:"only_files"`
+	OnlyDirs     bool           `yaml:"only_dirs"`
+	IgnoreHidden *bool          `yaml:"ignore_hidden"`
 }
 
 // Action describes an action bound to a watch.
@@ -69,7 +70,7 @@ type Action struct {
 	URL       string            `yaml:"url"`  // webhook
 	Env       map[string]string `yaml:"env"`
 	Cwd       string            `yaml:"cwd"`
-	Timeout   time.Duration     `yaml:"timeout_ms"`
+	Timeout   MillisDuration    `yaml:"timeout_ms"`
 	Retries   int               `yaml:"retries"`
 	Overwrite *bool             `yaml:"overwrite"`
 	Condition Condition         `yaml:"condition"`
@@ -77,12 +78,12 @@ type Action struct {
 
 // Watch is a folder with actions.
 type Watch struct {
-	Path             string        `yaml:"path"`
-	Recursive        bool          `yaml:"recursive"`
-	ScanInterval     time.Duration `yaml:"scan_interval_ms"`
-	Debounce         time.Duration `yaml:"debounce_ms"`
-	StopOnFirstMatch bool          `yaml:"stop_on_first_match"`
-	Actions          []Action      `yaml:"actions"`
+	Path             string         `yaml:"path"`
+	Recursive        bool           `yaml:"recursive"`
+	ScanInterval     MillisDuration `yaml:"scan_interval_ms"`
+	Debounce         MillisDuration `yaml:"debounce_ms"`
+	StopOnFirstMatch bool           `yaml:"stop_on_first_match"`
+	Actions          []Action       `yaml:"actions"`
 }
 
 // Config is the root.
@@ -125,10 +126,10 @@ func (c *Config) Validate() error {
 		if _, err := os.Stat(w.Path); err != nil {
 			return fmt.Errorf("watch %s: path error: %w", w.Path, err)
 		}
-		if w.ScanInterval <= 0 {
+		if w.ScanInterval.Duration() <= 0 {
 			return fmt.Errorf("watch %s: scan_interval_ms must be > 0", w.Path)
 		}
-		if w.Debounce < 0 {
+		if w.Debounce.Duration() < 0 {
 			return fmt.Errorf("watch %s: debounce_ms must be >= 0", w.Path)
 		}
 		if len(w.Actions) == 0 {
@@ -179,24 +180,24 @@ func validateAction(a *Action) error {
 }
 
 func (c *Config) applyDefaults() error {
-	if c.Global.ScanInterval == 0 {
-		c.Global.ScanInterval = 1000 * time.Millisecond
+	if c.Global.ScanInterval.Duration() == 0 {
+		c.Global.ScanInterval = MillisFromDuration(1000 * time.Millisecond)
 	}
-	if c.Global.Debounce == 0 {
-		c.Global.Debounce = 200 * time.Millisecond
+	if c.Global.Debounce.Duration() == 0 {
+		c.Global.Debounce = MillisFromDuration(200 * time.Millisecond)
 	}
 	for i := range c.Watches {
 		w := &c.Watches[i]
-		if w.ScanInterval == 0 {
+		if w.ScanInterval.Duration() == 0 {
 			w.ScanInterval = c.Global.ScanInterval
 		}
-		if w.Debounce == 0 {
+		if w.Debounce.Duration() == 0 {
 			w.Debounce = c.Global.Debounce
 		}
 		for j := range w.Actions {
 			a := &w.Actions[j]
-			if a.Timeout == 0 {
-				a.Timeout = 30 * time.Second
+			if a.Timeout.Duration() == 0 {
+				a.Timeout = MillisFromDuration(30 * time.Second)
 			}
 			if a.Retries < 0 {
 				a.Retries = 0
@@ -215,37 +216,42 @@ func (c *Config) applyDefaults() error {
 }
 
 func (c *Config) normalizeDurations() {
-	if c.Global.ScanInterval > 0 {
-		c.Global.ScanInterval = fromMillis(c.Global.ScanInterval)
-	}
-	if c.Global.Debounce > 0 {
-		c.Global.Debounce = fromMillis(c.Global.Debounce)
-	}
-	for i := range c.Watches {
-		w := &c.Watches[i]
-		if w.ScanInterval > 0 {
-			w.ScanInterval = fromMillis(w.ScanInterval)
-		}
-		if w.Debounce > 0 {
-			w.Debounce = fromMillis(w.Debounce)
-		}
-		for j := range w.Actions {
-			a := &w.Actions[j]
-			if a.Timeout > 0 {
-				a.Timeout = fromMillis(a.Timeout)
-			}
-			if a.Condition.MinAge > 0 {
-				a.Condition.MinAge = fromMillis(a.Condition.MinAge)
-			}
-			if a.Condition.MaxAge > 0 {
-				a.Condition.MaxAge = fromMillis(a.Condition.MaxAge)
-			}
-		}
-	}
+	// no-op now; handled in unmarshal
 }
 
-func fromMillis(d time.Duration) time.Duration {
+// MillisDuration unmarshals from int (ms) or duration string.
+// MillisDuration stores a duration in milliseconds parsed from int or duration string.
+type MillisDuration int64
+
+// MillisFromDuration converts time.Duration to MillisDuration.
+func MillisFromDuration(d time.Duration) MillisDuration {
+	return MillisDuration(d / time.Millisecond)
+}
+
+// Duration returns the time.Duration value.
+func (d MillisDuration) Duration() time.Duration {
 	return time.Duration(int64(d)) * time.Millisecond
+}
+
+// UnmarshalYAML implements yaml unmarshalling with ms support.
+func (d *MillisDuration) UnmarshalYAML(value *yaml.Node) error {
+	switch value.Kind {
+	case yaml.ScalarNode:
+		// try int (milliseconds)
+		if v, err := strconv.ParseInt(value.Value, 10, 64); err == nil {
+			*d = MillisDuration(v)
+			return nil
+		}
+		// fallback to duration string
+		parsed, err := time.ParseDuration(value.Value)
+		if err != nil {
+			return fmt.Errorf("invalid duration %q: %w", value.Value, err)
+		}
+		*d = MillisDuration(parsed.Milliseconds())
+		return nil
+	default:
+		return fmt.Errorf("invalid duration node kind: %v", value.Kind)
+	}
 }
 
 // MatchesInclude tests include patterns; if none, default allow.

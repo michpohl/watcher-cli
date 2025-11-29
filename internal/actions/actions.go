@@ -66,10 +66,7 @@ func (e *Executor) Execute(ctx context.Context, ev Context, action config.Action
 	if !ok {
 		return fmt.Errorf("no runner for type %s", action.Type)
 	}
-	if e.DryRun {
-		return nil
-	}
-	timeout := action.Timeout
+	timeout := action.Timeout.Duration()
 	if timeout == 0 {
 		timeout = 30 * time.Second
 	}

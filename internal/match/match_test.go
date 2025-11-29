@@ -78,7 +78,7 @@ func TestMatchConditions(t *testing.T) {
 				},
 				Condition: config.Condition{
 					MinSizeBytes: minSize,
-					MinAge:       age,
+					MinAge:       config.MillisFromDuration(age),
 					OnlyFiles:    true,
 				},
 			},

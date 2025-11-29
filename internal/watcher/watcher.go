@@ -79,7 +79,7 @@ type snapshotState struct {
 // Run starts the polling loop.
 func (w *Worker) Run(ctx context.Context) {
 	scn := scanner.New(w.cfg.Path, w.cfg.Recursive)
-	ticker := time.NewTicker(w.cfg.ScanInterval)
+	ticker := time.NewTicker(w.cfg.ScanInterval.Duration())
 	defer ticker.Stop()
 
 	// initial scan
@@ -106,9 +106,9 @@ func (w *Worker) Run(ctx context.Context) {
 }
 
 func (w *Worker) handleEvent(ctx context.Context, ev scanner.Event) {
-	if w.cfg.Debounce > 0 {
+	if w.cfg.Debounce.Duration() > 0 {
 		last, ok := w.debounceMap[ev.Path]
-		if ok && time.Since(last) < w.cfg.Debounce {
+		if ok && time.Since(last) < w.cfg.Debounce.Duration() {
 			return
 		}
 		w.debounceMap[ev.Path] = time.Now()

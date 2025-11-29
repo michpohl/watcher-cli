@@ -56,10 +56,10 @@ func conditionsPass(ev scanner.Event, c config.Condition) bool {
 	if c.MaxSizeBytes > 0 && ev.Info.Size > c.MaxSizeBytes {
 		return false
 	}
-	if c.MinAge > 0 && ev.Age < c.MinAge {
+	if c.MinAge.Duration() > 0 && ev.Age < c.MinAge.Duration() {
 		return false
 	}
-	if c.MaxAge > 0 && ev.Age > c.MaxAge {
+	if c.MaxAge.Duration() > 0 && ev.Age > c.MaxAge.Duration() {
 		return false
 	}
 	if c.OnlyFiles && ev.Info.IsDir {

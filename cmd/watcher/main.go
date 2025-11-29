@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"log/slog"
 	"syscall"
 	"time"
 
