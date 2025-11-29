@@ -1,0 +1,32 @@
+global:
+  scan_interval_ms: 1000
+  debounce_ms: 200
+  dry_run: false
+  defaults:
+    overwrite: false
+
+watches:
+  - path: ./incoming
+    recursive: true
+    scan_interval_ms: 500
+    stop_on_first_match: false
+    actions:
+      - name: images
+        include: ["**/*.jpg", "**/*.png"]
+        events: [create, modify]
+        type: exec
+        cmd: "python process_image.py {path}"
+        retries: 3
+        timeout_ms: 10000
+      - name: pdf_backup
+        include: ["**/*.pdf"]
+        exclude: ["**/tmp/**"]
+        events: [create]
+        type: copy
+        dest: "/backup/docs/{relpath}"
+        overwrite: true
+      - name: archive_old
+        include: ["**/*"]
+        events: [modify]
+        type: move
+        dest: "{dir}/archive/{name}"
