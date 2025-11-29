@@ -9,6 +9,7 @@ Directory watcher with per-folder actions, built in Go.
 - Core actions: exec, copy, move/rename, webhook.
 - Template tokens available in commands/destinations: `{path}`, `{relpath}`, `{dir}`, `{name}`, `{stem}`, `{ext}`, `{event}`, `{size}`, `{mtime}`, `{age_ms}`, `{age_days}`.
 - Dry-run flag from config to log decisions without executing actions.
+- Simulation CLI to test matching/actions without touching the filesystem.
 
 ## Getting Started
 Requires Go 1.21+. After installing Go, run:
@@ -33,6 +34,12 @@ Validate config without running:
 ```sh
 ./watcher validate --config watcher.yaml
 ```
+
+Simulate an event (dry-run by default):
+```sh
+./watcher simulate --config watcher.yaml --file /path/to/file.jpg --event create
+```
+Use `--execute` to actually run matching actions.
 
 ## Configuration Notes
 - `global.scan_interval_ms`: default polling interval (ms), overridable per watch.
