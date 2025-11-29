@@ -1,7 +1,7 @@
 global:
   scan_interval_ms: 1000
   debounce_ms: 200
-  dry_run: false
+  dry_run: true
   defaults:
     overwrite: false
 
@@ -16,7 +16,7 @@ watches:
         include: ["**/*.jpg", "**/*.png"]
         events: [create, modify]
         type: exec
-        cmd: "python process_image.py {path}"
+        cmd: "echo processing {path}"
         retries: 3
         timeout_ms: 10000
       - name: pdf_backup
@@ -24,7 +24,7 @@ watches:
         exclude: ["**/tmp/**"]
         events: [create]
         type: copy
-        dest: "/backup/docs/{relpath}"
+        dest: "./backup/docs/{relpath}"
         overwrite: true
       - name: archive_old
         include: ["**/*"]
