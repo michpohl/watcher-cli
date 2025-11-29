@@ -1,0 +1,8 @@
+/bin/
+/dist/
+/watcher
+/watcher.exe
+/watcher-cli
+/coverage.out
+*.log
+*.tmp
