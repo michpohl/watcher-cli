@@ -129,6 +129,11 @@ func (w *Worker) handleEvent(ctx context.Context, ev scanner.Event) {
 			Age:     ev.Age,
 			IsDir:   ev.Info.IsDir,
 		}
+		if w.executor.DryRun {
+			w.logger.Info("dry-run action", "watch", w.cfg.Path, "action", action.Name, "event", ev.Type, "path", ev.Path)
+			w.tracker.IncAction(w.cfg.Path+"."+action.Name, true, "")
+			continue
+		}
 		err := w.executor.Execute(ctx, evCtx, action)
 		if err != nil {
 			w.logger.Error("action error", "watch", w.cfg.Path, "action", action.Name, "err", err)
