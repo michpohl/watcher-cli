@@ -286,6 +286,11 @@ func compilePatterns(patterns []string) ([]*doublestar.Glob, error) {
 
 // MatchesInclude tests include patterns; if none, default allow.
 func (a *Action) MatchesInclude(relPath string) bool {
+	if len(a.Include) > 0 && len(a.compiledIncludes) == 0 {
+		if incs, err := compilePatterns(a.Include); err == nil {
+			a.compiledIncludes = incs
+		}
+	}
 	if len(a.compiledIncludes) == 0 {
 		return true
 	}
@@ -299,6 +304,11 @@ func (a *Action) MatchesInclude(relPath string) bool {
 
 // MatchesExclude tests exclude patterns.
 func (a *Action) MatchesExclude(relPath string) bool {
+	if len(a.Exclude) > 0 && len(a.compiledExcludes) == 0 {
+		if excs, err := compilePatterns(a.Exclude); err == nil {
+			a.compiledExcludes = excs
+		}
+	}
 	for _, g := range a.compiledExcludes {
 		if g.Match(relPath) {
 			return true

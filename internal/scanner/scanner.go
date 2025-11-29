@@ -84,23 +84,27 @@ func (s *Scanner) Scan() (Snapshot, error) {
 func Diff(root string, prev, curr Snapshot) []Event {
 	events := []Event{}
 	prevBySignature := map[string]string{}
+	deletes := map[string]Event{}
+	modifies := []Event{}
+	creates := []Event{}
+	moves := []Event{}
+
 	for p, info := range prev {
 		sig := signature(info)
 		prevBySignature[sig] = p
 		if _, exists := curr[p]; !exists {
-			events = append(events, Event{
+			deletes[p] = Event{
 				Path:    p,
 				RelPath: rel(root, p),
 				Type:    "delete",
 				Info:    info,
-				Age:     0,
-			})
+			}
 		}
 	}
 	for p, info := range curr {
 		if prevInfo, exists := prev[p]; exists {
 			if hasChanged(prevInfo, info) {
-				events = append(events, Event{
+				modifies = append(modifies, Event{
 					Path:    p,
 					RelPath: rel(root, p),
 					Type:    "modify",
@@ -110,10 +114,9 @@ func Diff(root string, prev, curr Snapshot) []Event {
 			}
 			continue
 		}
-		// create or move
 		sig := signature(info)
 		if oldPath, ok := prevBySignature[sig]; ok && oldPath != p {
-			events = append(events, Event{
+			moves = append(moves, Event{
 				Path:     p,
 				PrevPath: oldPath,
 				RelPath:  rel(root, p),
@@ -121,8 +124,9 @@ func Diff(root string, prev, curr Snapshot) []Event {
 				Info:     info,
 				Age:      age(info),
 			})
+			delete(deletes, oldPath)
 		} else {
-			events = append(events, Event{
+			creates = append(creates, Event{
 				Path:    p,
 				RelPath: rel(root, p),
 				Type:    "create",
@@ -130,6 +134,18 @@ func Diff(root string, prev, curr Snapshot) []Event {
 				Age:     age(info),
 			})
 		}
+	}
+	for _, ev := range modifies {
+		events = append(events, ev)
+	}
+	for _, ev := range moves {
+		events = append(events, ev)
+	}
+	for _, ev := range creates {
+		events = append(events, ev)
+	}
+	for _, ev := range deletes {
+		events = append(events, ev)
 	}
 	return events
 }
