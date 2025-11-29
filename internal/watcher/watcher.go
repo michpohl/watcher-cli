@@ -68,7 +68,7 @@ type Worker struct {
 	executor *actions.Executor
 	matcher  *match.Matcher
 
-	prev snapshotState
+	prev        snapshotState
 	debounceMap map[string]time.Time
 }
 
@@ -120,14 +120,14 @@ func (w *Worker) handleEvent(ctx context.Context, ev scanner.Event) {
 	selected := w.matcher.Match(ev, w.cfg)
 	for _, action := range selected {
 		evCtx := actions.Context{
-			Path:    ev.Path,
-			RelPath: ev.RelPath,
+			Path:     ev.Path,
+			RelPath:  ev.RelPath,
 			PrevPath: ev.PrevPath,
-			Event:   ev.Type,
-			Size:    ev.Info.Size,
-			ModTime: ev.Info.ModTime,
-			Age:     ev.Age,
-			IsDir:   ev.Info.IsDir,
+			Event:    ev.Type,
+			Size:     ev.Info.Size,
+			ModTime:  ev.Info.ModTime,
+			Age:      ev.Age,
+			IsDir:    ev.Info.IsDir,
 		}
 		if w.executor.DryRun {
 			w.logger.Info("dry-run action", "watch", w.cfg.Path, "action", action.Name, "event", ev.Type, "path", ev.Path)

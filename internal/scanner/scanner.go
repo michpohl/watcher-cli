@@ -23,12 +23,12 @@ type Snapshot map[string]FileInfo
 
 // Event represents a change detected between snapshots.
 type Event struct {
-	Path    string
-	RelPath string
+	Path     string
+	RelPath  string
 	PrevPath string
-	Type    string // create, modify, delete, move
-	Info    FileInfo
-	Age     time.Duration
+	Type     string // create, modify, delete, move
+	Info     FileInfo
+	Age      time.Duration
 }
 
 // Scanner walks a root directory to produce a snapshot.

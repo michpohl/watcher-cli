@@ -50,14 +50,14 @@ type Executor struct {
 
 // Context is the data for templating and payloads.
 type Context struct {
-	Path    string
-	RelPath string
+	Path     string
+	RelPath  string
 	PrevPath string
-	Event   string
-	Size    int64
-	ModTime time.Time
-	Age     time.Duration
-	IsDir   bool
+	Event    string
+	Size     int64
+	ModTime  time.Time
+	Age      time.Duration
+	IsDir    bool
 }
 
 // Execute runs an action with retries and timeout.

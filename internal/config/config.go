@@ -73,9 +73,6 @@ type Action struct {
 	Retries   int               `yaml:"retries"`
 	Overwrite *bool             `yaml:"overwrite"`
 	Condition Condition         `yaml:"condition"`
-
-	compiledIncludes []*doublestar.Glob
-	compiledExcludes []*doublestar.Glob
 }
 
 // Watch is a folder with actions.
@@ -107,9 +104,6 @@ func Load(path string) (Config, error) {
 	}
 	cfg.normalizeDurations()
 	if err := cfg.applyDefaults(); err != nil {
-		return Config{}, err
-	}
-	if err := cfg.compilePatterns(); err != nil {
 		return Config{}, err
 	}
 	if err := cfg.Validate(); err != nil {
@@ -254,49 +248,14 @@ func fromMillis(d time.Duration) time.Duration {
 	return time.Duration(int64(d)) * time.Millisecond
 }
 
-func (c *Config) compilePatterns() error {
-	for i := range c.Watches {
-		for j := range c.Watches[i].Actions {
-			a := &c.Watches[i].Actions[j]
-			incs, err := compilePatterns(a.Include)
-			if err != nil {
-				return fmt.Errorf("compile include for action %s: %w", a.Name, err)
-			}
-			excs, err := compilePatterns(a.Exclude)
-			if err != nil {
-				return fmt.Errorf("compile exclude for action %s: %w", a.Name, err)
-			}
-			a.compiledIncludes = incs
-			a.compiledExcludes = excs
-		}
-	}
-	return nil
-}
-
-func compilePatterns(patterns []string) ([]*doublestar.Glob, error) {
-	var res []*doublestar.Glob
-	for _, p := range patterns {
-		g, err := doublestar.Compile(p)
-		if err != nil {
-			return nil, fmt.Errorf("bad pattern %q: %w", p, err)
-		}
-		res = append(res, g)
-	}
-	return res, nil
-}
-
 // MatchesInclude tests include patterns; if none, default allow.
 func (a *Action) MatchesInclude(relPath string) bool {
-	if len(a.Include) > 0 && len(a.compiledIncludes) == 0 {
-		if incs, err := compilePatterns(a.Include); err == nil {
-			a.compiledIncludes = incs
-		}
-	}
-	if len(a.compiledIncludes) == 0 {
+	if len(a.Include) == 0 {
 		return true
 	}
-	for _, g := range a.compiledIncludes {
-		if g.Match(relPath) {
+	p := filepath.ToSlash(relPath)
+	for _, pattern := range a.Include {
+		if ok, _ := doublestar.PathMatch(pattern, p); ok {
 			return true
 		}
 	}
@@ -305,13 +264,12 @@ func (a *Action) MatchesInclude(relPath string) bool {
 
 // MatchesExclude tests exclude patterns.
 func (a *Action) MatchesExclude(relPath string) bool {
-	if len(a.Exclude) > 0 && len(a.compiledExcludes) == 0 {
-		if excs, err := compilePatterns(a.Exclude); err == nil {
-			a.compiledExcludes = excs
-		}
+	if len(a.Exclude) == 0 {
+		return false
 	}
-	for _, g := range a.compiledExcludes {
-		if g.Match(relPath) {
+	p := filepath.ToSlash(relPath)
+	for _, pattern := range a.Exclude {
+		if ok, _ := doublestar.PathMatch(pattern, p); ok {
 			return true
 		}
 	}

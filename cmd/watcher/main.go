@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"log/slog"
 	"syscall"
 	"time"
 
@@ -52,7 +53,7 @@ func runCmd(cfgPath *string) *cobra.Command {
 			if err := cfg.ResolvePaths(); err != nil {
 				return err
 			}
-			logger := logging.New(0)
+			logger := logging.New(slog.LevelInfo)
 			ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 			defer cancel()
 			super := watcher.NewSupervisor(cfg, logger, cfg.Global.DryRun)
@@ -160,14 +161,14 @@ func simulateCmd(cfgPath *string) *cobra.Command {
 			ctx := context.Background()
 			for _, a := range selected {
 				err := exec.Execute(ctx, actions.Context{
-					Path:    ev.Path,
-					RelPath: ev.RelPath,
+					Path:     ev.Path,
+					RelPath:  ev.RelPath,
 					PrevPath: ev.PrevPath,
-					Event:   ev.Type,
-					Size:    ev.Info.Size,
-					ModTime: ev.Info.ModTime,
-					Age:     ev.Age,
-					IsDir:   ev.Info.IsDir,
+					Event:    ev.Type,
+					Size:     ev.Info.Size,
+					ModTime:  ev.Info.ModTime,
+					Age:      ev.Age,
+					IsDir:    ev.Info.IsDir,
 				}, a)
 				if err != nil {
 					fmt.Printf("action %s error: %v\n", a.Name, err)
