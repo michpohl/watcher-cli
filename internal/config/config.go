@@ -83,6 +83,7 @@ type Watch struct {
 	Path             string        `yaml:"path"`
 	Recursive        bool          `yaml:"recursive"`
 	ScanInterval     time.Duration `yaml:"scan_interval_ms"`
+	Debounce         time.Duration `yaml:"debounce_ms"`
 	StopOnFirstMatch bool          `yaml:"stop_on_first_match"`
 	Actions          []Action      `yaml:"actions"`
 }
@@ -131,6 +132,9 @@ func (c *Config) Validate() error {
 		}
 		if w.ScanInterval <= 0 {
 			return fmt.Errorf("watch %s: scan_interval_ms must be > 0", w.Path)
+		}
+		if w.Debounce < 0 {
+			return fmt.Errorf("watch %s: debounce_ms must be >= 0", w.Path)
 		}
 		if len(w.Actions) == 0 {
 			return fmt.Errorf("watch %s: at least one action is required", w.Path)
@@ -191,6 +195,9 @@ func (c *Config) applyDefaults() error {
 		if w.ScanInterval == 0 {
 			w.ScanInterval = c.Global.ScanInterval
 		}
+		if w.Debounce == 0 {
+			w.Debounce = c.Global.Debounce
+		}
 		for j := range w.Actions {
 			a := &w.Actions[j]
 			if a.Timeout == 0 {
@@ -223,6 +230,9 @@ func (c *Config) normalizeDurations() {
 		w := &c.Watches[i]
 		if w.ScanInterval > 0 {
 			w.ScanInterval = fromMillis(w.ScanInterval)
+		}
+		if w.Debounce > 0 {
+			w.Debounce = fromMillis(w.Debounce)
 		}
 		for j := range w.Actions {
 			a := &w.Actions[j]

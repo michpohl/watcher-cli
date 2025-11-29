@@ -4,6 +4,7 @@ Directory watcher with per-folder actions, built in Go.
 
 ## Features
 - Poll-based watching of multiple folders with per-folder scan intervals.
+- Per-folder debounce to suppress rapid repeat events.
 - Multiple actions per folder; each action has its own filters (include/exclude), event types, size/age constraints, hidden ignore, and overwrite policy.
 - Core actions: exec, copy, move/rename, webhook.
 - Template tokens available in commands/destinations: `{path}`, `{relpath}`, `{dir}`, `{name}`, `{stem}`, `{ext}`, `{event}`, `{size}`, `{mtime}`, `{age_ms}`, `{age_days}`.
@@ -35,6 +36,7 @@ Validate config without running:
 
 ## Configuration Notes
 - `global.scan_interval_ms`: default polling interval (ms), overridable per watch.
+- `global.debounce_ms` and `watches[*].debounce_ms`: suppress rapid duplicate events (ms).
 - `watches[*].actions[*].events`: any of `create`, `modify`, `delete`, `move`.
 - `overwrite`: if omitted, uses global default; can be true/false per action.
 - `ignore_hidden`: defaults to true per action.

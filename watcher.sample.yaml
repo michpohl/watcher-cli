@@ -9,6 +9,7 @@ watches:
   - path: ./incoming
     recursive: true
     scan_interval_ms: 500
+    debounce_ms: 200
     stop_on_first_match: false
     actions:
       - name: images

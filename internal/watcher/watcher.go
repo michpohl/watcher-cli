@@ -69,6 +69,7 @@ type Worker struct {
 	matcher  *match.Matcher
 
 	prev snapshotState
+	debounceMap map[string]time.Time
 }
 
 type snapshotState struct {
@@ -83,6 +84,7 @@ func (w *Worker) Run(ctx context.Context) {
 
 	// initial scan
 	w.prev.data, _ = scn.Scan()
+	w.debounceMap = make(map[string]time.Time)
 
 	for {
 		select {
@@ -104,6 +106,13 @@ func (w *Worker) Run(ctx context.Context) {
 }
 
 func (w *Worker) handleEvent(ctx context.Context, ev scanner.Event) {
+	if w.cfg.Debounce > 0 {
+		last, ok := w.debounceMap[ev.Path]
+		if ok && time.Since(last) < w.cfg.Debounce {
+			return
+		}
+		w.debounceMap[ev.Path] = time.Now()
+	}
 	w.tracker.IncEvent(w.cfg.Path)
 	selected := w.matcher.Match(ev, w.cfg)
 	for _, action := range selected {
