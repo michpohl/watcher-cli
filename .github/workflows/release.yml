@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version and detect changes
+        id: version
+        run: |
+          set -euo pipefail
+          NEW_VERSION=$(cat VERSION)
+          if [ -z "$NEW_VERSION" ]; then
+            echo "VERSION file is empty" >&2
+            exit 1
+          fi
+          PREV_VERSION=$(git show HEAD^:VERSION 2>/dev/null || echo "")
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "prev_version=$PREV_VERSION" >> "$GITHUB_OUTPUT"
+          if [ "$NEW_VERSION" != "$PREV_VERSION" ]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "tag=v$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip release when version unchanged
+        if: steps.version.outputs.release != 'true'
+        run: echo "VERSION unchanged (${{ steps.version.outputs.prev_version }} -> ${{ steps.version.outputs.new_version }}); skipping release."
+
+      - name: Set up Go
+        if: steps.version.outputs.release == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21.x"
+
+      - name: Build release archives
+        if: steps.version.outputs.release == 'true'
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.new_version }}"
+          mkdir -p dist
+          platforms=(
+            "linux amd64"
+            "linux arm64"
+            "darwin amd64"
+            "darwin arm64"
+            "windows amd64"
+          )
+          for platform in "${platforms[@]}"; do
+            read -r GOOS GOARCH <<<"$platform"
+            BIN="watcher-${VERSION}-${GOOS}-${GOARCH}"
+            OUT="dist/${BIN}"
+            EXT=""
+            if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
+            echo "Building ${BIN}${EXT}"
+            GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build \
+              -ldflags="-s -w -X 'watcher-cli/internal/version.Version=${VERSION}'" \
+              -o "${OUT}${EXT}" ./cmd/watcher
+            if [ "$GOOS" = "windows" ]; then
+              zip -j "${OUT}.zip" "${OUT}${EXT}"
+              rm "${OUT}${EXT}"
+            else
+              tar -czf "${OUT}.tar.gz" -C dist "$(basename "${OUT}${EXT}")"
+              rm "${OUT}${EXT}"
+            fi
+          done
+
+      - name: Generate checksums
+        if: steps.version.outputs.release == 'true'
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
+
+      - name: Publish GitHub Release
+        if: steps.version.outputs.release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: watcher v${{ steps.version.outputs.new_version }}
+          generate_release_notes: true
+          files: dist/*

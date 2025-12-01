@@ -83,6 +83,12 @@ watches:
 - Format: `go fmt ./...`
 - Update deps: `go mod tidy`
 
+## Release automation
+- Version source: `VERSION` file (semantic version without leading `v`, e.g., `0.1.0`).
+- CI: `.github/workflows/release.yml` runs on pushes to `main`. If `VERSION` changed since the previous commit, it builds archives for linux/darwin (amd64/arm64) and windows/amd64, computes checksums, and creates a GitHub Release tagged `v<VERSION>` with the assets.
+- Binaries embed the version via ldflags; use `watcher --version` to verify.
+- To cut a release: bump `VERSION`, push to `main`, and the workflow handles packaging/publishing to GitHub Releases/Packages.
+
 ## Tips
 - Start with `dry_run: true` until actions look correct.
 - Point copy/move destinations to writable paths you own.

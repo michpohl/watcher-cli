@@ -17,13 +17,15 @@ import (
 	"watcher-cli/internal/logging"
 	"watcher-cli/internal/match"
 	"watcher-cli/internal/scanner"
+	"watcher-cli/internal/version"
 	"watcher-cli/internal/watcher"
 )
 
 func main() {
 	root := &cobra.Command{
-		Use:   "watcher",
-		Short: "Directory watcher with per-action filters",
+		Use:     "watcher",
+		Short:   "Directory watcher with per-action filters",
+		Version: version.Version,
 	}
 
 	var cfgPath string
